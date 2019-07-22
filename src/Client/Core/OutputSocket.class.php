@@ -22,14 +22,17 @@ class OutputSocket implements OutputInterface
 
 	public function startup(array $params)
 	{
-		// create socket to server.
-
+		echo "<pre>";
+		print_r($params);
+		echo "</pre>";
 	}
 
 
 	public function shutdown(array $params)
 	{
-
+		echo "<pre>";
+		print_r($params);
+		echo "</pre>";
 	}
 
 }
