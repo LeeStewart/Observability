@@ -1,7 +1,11 @@
 <?php declare(strict_types=1);
 
+ini_set('display_errors', "1");
+error_reporting(E_ALL);
+
 
 require_once(__DIR__."/src/__autoload.php");
+require_once(__DIR__."/vendor/autoload.php");
 
 //require_once(__DIR__."/examples/Stackdriver/src/OutputStackdriver.class.php");
 
@@ -10,22 +14,28 @@ use \Observability\Client\Setup;
 use \Observability\Client\Trace;
 
 
-ini_set('display_errors', "1");
-error_reporting(E_ALL);
-
 
 //$sd = new Observability\Client\Core\OutputStackdriver();
 //Setup::addOutputInterface('stack-driver', $sd);
 
 
-$net = new Observability\Client\Core\OutputSocket();
+$net = new Observability\Client\Core\OutputSocket('tcp://localhost:55012');
 Setup::addOutputInterface('net', $net);
+
+Setup::setUserIdentifierString('LeeStewart@RandomOddness.com');
+
+
+//echo Setup::getCurrentContextString();
+//Setup::setParentContextString('{"spanIdentifier":"2efc9f08-d628-45ca-9c45-ba279638801e","parentSpanIdentifier":"","userIdentifier":"","debugServerAddress":"","platform":"PHP","version":"2019.08.07.01"}');
+//echo Setup::getCurrentContextString();
 
 //Setup::skipDisplay();
 Setup::startup();
 
+//echo Setup::getCurrentContextString();
 
 testFunction();
+
 
 
 Trace::outputMonkey("word", "test with no severity[{$_SERVER['DOCUMENT_ROOT']}]");

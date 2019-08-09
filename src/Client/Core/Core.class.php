@@ -9,6 +9,9 @@ namespace Observability\Client\Core;
 
 class Core
 {
+	const PLATFORM = "PHP";
+	const VERSION = "2019.08.07.01";
+
 	private static $initialized = false;
 	private static $skipDisplay = false;
 
@@ -17,6 +20,12 @@ class Core
 
 	// How long did it take to execute this page?
 	private static $startTimer = 0;
+
+	private static $spanIdentifier = '';
+	private static $parentSpanIdentifier = '';
+	private static $userIdentifier = '';
+	private static $debugServerAddress = '';
+
 
 
 	private function __construct() {}
@@ -30,6 +39,44 @@ class Core
 
 
 
+	public static function getCurrentContext()
+	{
+		$context = array();
+
+		$context['spanIdentifier'] = self::$spanIdentifier;
+		$context['parentSpanIdentifier'] = self::$parentSpanIdentifier;
+		$context['userIdentifier'] = self::$userIdentifier;
+		$context['debugServerAddress'] = self::$debugServerAddress;
+		$context['platform'] = Core::PLATFORM;
+		$context['version'] = Core::VERSION;
+
+		return $context;
+	}
+
+
+
+	public static function setParentContext(array $context)
+	{
+		if (!self::$userIdentifier)
+			self::$userIdentifier = $context['userIdentifier'];
+
+		if (!self::$parentSpanIdentifier)
+			self::$parentSpanIdentifier = $context['spanIdentifier'];
+
+		if (!self::$debugServerAddress)
+			self::$debugServerAddress = $context['debugServerAddress'];
+
+	}
+
+
+
+	public static function setUserIdentifierString($userIdentifierString)
+	{
+		self::$userIdentifier = self::generateIdentifier($userIdentifierString);
+	}
+
+
+
 	public static function startup()
 	{
 		if (self::$initialized)
@@ -39,6 +86,8 @@ class Core
 
 
 		self::$startTimer = microtime(true);
+
+		self::$spanIdentifier = self::generateIdentifier();
 
 		$params = self::formatStartupArguments();
 
@@ -63,7 +112,7 @@ class Core
 		foreach (self::$outputInterfaces as $tracerOutput)
 			$tracerOutput->startup($params);
 
-		register_shutdown_function(array('Observability\Client\Setup','shutdown'));
+		register_shutdown_function(array('Observability\Client\Core\Core','shutdown'));
 	}
 
 
@@ -79,8 +128,10 @@ class Core
 
 	public static function outputTrace(array $params)
 	{
-		$params['action'] = 'trace-output';
-		$params['platform'] = 'php';
+		$context = self::getCurrentContext();
+		$context['action'] = 'trace-output';
+
+		$params = array_merge($context, $params);
 
 		foreach (self::$outputInterfaces as $output)
 			$output->output($params);
@@ -103,7 +154,8 @@ class Core
 	{
 		global $argv;
 
-		$params = array();
+		$params = self::getCurrentContext();
+		$params['action'] = 'start-up';
 
 		$outputType = "";
 		if (php_sapi_name() == 'cli')
@@ -118,31 +170,18 @@ class Core
 		$ajax = false;
 		if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest')
 			$ajax = true;
-/*
-		$server = array(
-////			"script"=>@$_SERVER['SCRIPT_URL'] ?: realpath($argv[0].""),
-////			"server"=>@$_ENV['HOSTNAME'],
-//			"sandbox"=>$currentSandbox,
-//			"boxset"=>(($_ENV['BOXSET']!='stage')? $_ENV['BOXSET']: ($_ENV['IS_UAT']? "uat": 'stage')),
-			"timeStamp"=>self::$startTimer,
-			"host"=>@$_SERVER['HTTP_HOST'] ?: "Command Line",
-			"filename"=>@$_SERVER['SCRIPT_FILENAME'],
-			"scheme"=>@$_SERVER['HTTPS']=='on'? "https": (@$_SERVER['HTTP_HOST']? "http": ""),
-			"method"=>@$_SERVER['REQUEST_METHOD'],
-			"outputType"=>$outputType,
-			"referrer" => @$_SERVER['HTTP_REFERER'],
-//			"pid" => getmypid(),
-		);
-*/
+
 
 		$server = array();
 		$server['timeStamp'] = self::$startTimer;
+		// $server['server'] = @$_ENV['HOSTNAME'];
 		$server['host'] = @$_SERVER['HTTP_HOST'] ?: "Command Line";
 		$server['filename'] = @$_SERVER['SCRIPT_FILENAME'];
 		$server['scheme'] = @$_SERVER['HTTPS']=='on'? "https": (@$_SERVER['HTTP_HOST']? "http": "");
 		$server['method'] = @$_SERVER['REQUEST_METHOD'];
 		$server['outputType'] = $outputType;
 		$server['referrer'] = @$_SERVER['HTTP_REFERER'];
+		$server['pid'] = getmypid();
 		$server['ajax'] = $ajax;
 
 		$params['server'] = $server;
@@ -158,7 +197,8 @@ class Core
 
 	private static function formatShutdownArguments()
 	{
-		$params = array();
+		$params = self::getCurrentContext();
+		$params['action'] = 'shut-down';
 
 		$internals = array();
 		$internals["loadTime"] = (microtime(true) - self::$startTimer);
@@ -188,6 +228,59 @@ class Core
 		$params['files'] = $files;
 
 		return $params;
+	}
+
+
+
+	public static function generateIdentifier($user="")
+	{
+		if ($user)
+		{
+			$hash = md5(strtolower(trim($user)));
+
+			return sprintf('%08s-%04s-%04x-%04x-%12s',
+
+				// 32 bits for "time_low"
+				substr($hash, 0, 8),
+
+				// 16 bits for "time_mid"
+				substr($hash, 8, 4),
+
+				// 16 bits for "time_hi_and_version",
+				// four most significant bits holds version number 3
+				(hexdec(substr($hash, 12, 4)) & 0x0fff) | 0x3000,
+
+				// 16 bits, 8 bits for "clk_seq_hi_res",
+				// 8 bits for "clk_seq_low",
+				// two most significant bits holds zero and one for variant DCE1.1
+				(hexdec(substr($hash, 16, 4)) & 0x3fff) | 0x8000,
+
+				// 48 bits for "node"
+				substr($hash, 20, 12)
+			);
+		}
+		else
+		{
+			return sprintf('%04x%04x-%04x-%04x-%04x-%04x%04x%04x',
+				// 32 bits for "time_low"
+				mt_rand(0, 0xffff), mt_rand(0, 0xffff),
+
+				// 16 bits for "time_mid"
+				mt_rand(0, 0xffff),
+
+				// 16 bits for "time_hi_and_version",
+				// four most significant bits holds version number 4
+				mt_rand(0, 0x0fff) | 0x4000,
+
+				// 16 bits, 8 bits for "clk_seq_hi_res",
+				// 8 bits for "clk_seq_low",
+				// two most significant bits holds zero and one for variant DCE1.1
+				mt_rand(0, 0x3fff) | 0x8000,
+
+				// 48 bits for "node"
+				mt_rand(0, 0xffff), mt_rand(0, 0xffff), mt_rand(0, 0xffff)
+			);
+		}
 	}
 
 }
