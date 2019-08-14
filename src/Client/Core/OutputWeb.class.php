@@ -22,7 +22,7 @@ class OutputWeb implements OutputInterface
 
 	public function output(array $params)
 	{
-		if ($this->skipDisplay)
+		if ($this->skipDisplay || ($params['action'] != 'trace-output'))
 			return;
 
 

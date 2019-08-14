@@ -6,6 +6,7 @@ namespace Observability\Client\Core;
 
 
 
+use Socket\Raw\Exception;
 use Socket\Raw\Factory;
 use Socket\Raw\Socket;
 
@@ -14,8 +15,6 @@ class OutputSocket implements OutputInterface
 {
 	use OutputTrait;
 
-	private $collectionServerAddress = '';
-
 	/** @var Socket $socket */
 	private $socket = null;
 
@@ -23,13 +22,34 @@ class OutputSocket implements OutputInterface
 
 	public function __construct($collectionServerAddress='tcp://localhost:55012')
 	{
-		$this->collectionServerAddress = $collectionServerAddress;
+		try
+		{
+			$factory = new Factory();
+			$this->socket = $factory->createClient($collectionServerAddress);
+
+		}
+		catch (Exception $e)
+		{
+			// @todo Need to report this error
+			$this->socket = null;
+		}
+
+	}
+
+
+
+	public function checkConnection()
+	{
+		return (bool)$this->socket;
 	}
 
 
 
 	public function output(array $params)
 	{
+		if (!$this->socket)
+			return;
+
 		$this->socket->write(json_encode($params)."\n");
 	}
 
@@ -37,15 +57,15 @@ class OutputSocket implements OutputInterface
 
 	public function startup(array $params)
 	{
-		$factory = new Factory();
-
-		$this->socket = $factory->createClient($this->collectionServerAddress);
+		if (!$this->socket)
+			return;
 
 		$this->socket->write(json_encode($params)."\n");
 
 		// Receive and ignore response.
 		$response = $this->socket->read(8192);
 		//var_dump(htmlentities($response));
+
 
 		// @todo Remove temporary debugging output...
 		echo "<pre>";
@@ -57,6 +77,9 @@ class OutputSocket implements OutputInterface
 
 	public function shutdown(array $params)
 	{
+		if (!$this->socket)
+			return;
+
 		$this->socket->write(json_encode($params)."\n");
 
 		$this->socket->shutdown();

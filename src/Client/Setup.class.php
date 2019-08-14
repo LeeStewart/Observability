@@ -38,6 +38,19 @@ class Setup
 
 
 
+	public static function setAppPath(...$stringArray)
+	{
+		foreach ($stringArray as $rawString)
+		{
+			$parts = explode(".", $rawString);
+
+			foreach ($parts as $str)
+				Core\Core::setAppTag($str);
+		}
+	}
+
+
+
 	public static function setUserIdentifierString($userIdentifierString)
 	{
 		Core\Core::setUserIdentifierString($userIdentifierString);

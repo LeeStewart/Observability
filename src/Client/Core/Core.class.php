@@ -18,12 +18,15 @@ class Core
 	/** @var OutputInterface[] $outputInterfaces */
 	private static $outputInterfaces = array();
 
+	private static $appTags = array();
+
 	// How long did it take to execute this page?
 	private static $startTimer = 0;
 
 	private static $spanIdentifier = '';
 	private static $parentSpanIdentifier = '';
 	private static $userIdentifier = '';
+	private static $userIdentifierString = '';
 	private static $debugServerAddress = '';
 
 
@@ -46,6 +49,7 @@ class Core
 		$context['spanIdentifier'] = self::$spanIdentifier;
 		$context['parentSpanIdentifier'] = self::$parentSpanIdentifier;
 		$context['userIdentifier'] = self::$userIdentifier;
+		$context['userIdentifierString'] = self::$userIdentifierString;
 		$context['debugServerAddress'] = self::$debugServerAddress;
 		$context['platform'] = Core::PLATFORM;
 		$context['version'] = Core::VERSION;
@@ -60,6 +64,9 @@ class Core
 		if (!self::$userIdentifier)
 			self::$userIdentifier = $context['userIdentifier'];
 
+		if (!self::$userIdentifierString)
+			self::$userIdentifierString = $context['userIdentifierString'];
+
 		if (!self::$parentSpanIdentifier)
 			self::$parentSpanIdentifier = $context['spanIdentifier'];
 
@@ -72,7 +79,15 @@ class Core
 
 	public static function setUserIdentifierString($userIdentifierString)
 	{
+		self::$userIdentifierString = $userIdentifierString;
 		self::$userIdentifier = self::generateIdentifier($userIdentifierString);
+	}
+
+
+
+	public static function setAppTag($appTag)
+	{
+		self::$appTags[] = $appTag;
 	}
 
 
