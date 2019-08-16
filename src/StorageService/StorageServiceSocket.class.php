@@ -1,9 +1,20 @@
 <?php declare(strict_types=1);
+/**
+ * Storage Server - Socket Class
+ *
+ * Accepts incoming connections from Client code and accepts the Trace and Metrics info
+ * that is being output.
+ *
+ *****************************************************************************************
+ * @author Lee Stewart <LeeStewart@RandomOddness.com>
+ * @copyright (c) 2019 Lee Stewart
+ * @license https://github.com/LeeStewart/obs-php/blob/master/LICENSE
+ * @version 2019.08.10.01
+ **/
 
 
 
 namespace Observability\StorageService;
-
 
 
 use Socket\Raw\Exception;
@@ -74,9 +85,7 @@ class StorageServiceSocket
 					);
 					$client->write(json_encode($response)."\n");
 
-					echo "New client connected #{$this->connectionNum} - '{$request['spanIdentifier']}'\n";
-
-					//				print_r($request);
+					//echo "New client connected #{$this->connectionNum} - '{$request['spanIdentifier']}'\n";
 
 					$this->clients[$request['spanIdentifier']] = $client;
 					return $request;
@@ -118,9 +127,9 @@ class StorageServiceSocket
 
 					$data = trim($data);
 
-					echo "$identifier - ";
-					echo strlen($data)." bytes";
-					echo "\n";
+					//echo "$identifier - ";
+					//echo strlen($data)." bytes";
+					//echo "\n";
 
 					$data = json_decode($data, true);
 					//if ($data['action'] == 'trace-output')
@@ -132,14 +141,14 @@ class StorageServiceSocket
 				else
 				{
 					$client->assertAlive();
-					echo "Killing connection '$identifier'\n";
+					//echo "Killing connection '$identifier'\n";
 					unset($this->clients[$identifier]);
 				}
 
 			}
 			catch (Exception $e)
 			{
-				echo "Killing connection '$identifier' {$e->getMessage()}\n";
+				//echo "Killing connection '$identifier' {$e->getMessage()}\n";
 				unset($this->clients[$identifier]);
 
 			}
@@ -148,6 +157,5 @@ class StorageServiceSocket
 
 		return array();
 	}
-
 
 }

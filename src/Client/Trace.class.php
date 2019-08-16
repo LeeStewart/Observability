@@ -1,4 +1,15 @@
 <?php declare(strict_types=1);
+/**
+ * Client - Trace Class
+ *
+ * The main class for all Trace-related output.
+ *
+ *****************************************************************************************
+ * @author Lee Stewart <LeeStewart@RandomOddness.com>
+ * @copyright (c) 2019 Lee Stewart
+ * @license https://github.com/LeeStewart/obs-php/blob/master/LICENSE
+ * @version 2019.08.14.01
+ **/
 
 
 
@@ -19,36 +30,9 @@ class Trace
 	const SEVERITY_WARNING = '--warning';
 	const SEVERITY_ERROR = '--error';
 
-	private static $initialized = false;
-	private static $skipDisplay = false;
-
 
 
 	private function __construct() {}
-
-
-
-	public static function startup()
-	{
-		if (self::$initialized)
-			return;
-
-		self::$initialized = true;
-	}
-
-
-
-	public static function shutdown()
-	{
-
-
-	}
-
-
-	public static function skipDisplay($skip=true)
-	{
-		self::$skipDisplay = $skip;
-	}
 
 
 

@@ -1,9 +1,20 @@
 <?php declare(strict_types=1);
+/**
+ * Client - Core Class
+ *
+ * An internally used class that deal with the formatting and output of all Trace and
+ * Metrics data.
+ *
+ *****************************************************************************************
+ * @author Lee Stewart <LeeStewart@RandomOddness.com>
+ * @copyright (c) 2019 Lee Stewart
+ * @license https://github.com/LeeStewart/obs-php/blob/master/LICENSE
+ * @version 2019.08.14.01
+ **/
 
 
 
 namespace Observability\Client\Core;
-
 
 
 
@@ -27,7 +38,7 @@ class Core
 	private static $parentSpanIdentifier = '';
 	private static $userIdentifier = '';
 	private static $userIdentifierString = '';
-	private static $debugServerAddress = '';
+	private static $liveTraceAddress = '';
 
 
 
@@ -50,9 +61,11 @@ class Core
 		$context['parentSpanIdentifier'] = self::$parentSpanIdentifier;
 		$context['userIdentifier'] = self::$userIdentifier;
 		$context['userIdentifierString'] = self::$userIdentifierString;
-		$context['debugServerAddress'] = self::$debugServerAddress;
+		$context['liveTraceAddress'] = self::$liveTraceAddress;
 		$context['platform'] = Core::PLATFORM;
 		$context['version'] = Core::VERSION;
+		$context['tags'] = self::$appTags;
+		$context['timeStamp'] = microtime(true);
 
 		return $context;
 	}
@@ -70,8 +83,8 @@ class Core
 		if (!self::$parentSpanIdentifier)
 			self::$parentSpanIdentifier = $context['spanIdentifier'];
 
-		if (!self::$debugServerAddress)
-			self::$debugServerAddress = $context['debugServerAddress'];
+		if (!self::$liveTraceAddress)
+			self::$liveTraceAddress = $context['liveTraceAddress'];
 
 	}
 
@@ -81,6 +94,20 @@ class Core
 	{
 		self::$userIdentifierString = $userIdentifierString;
 		self::$userIdentifier = self::generateIdentifier($userIdentifierString);
+	}
+
+
+
+	public static function setLiveTraceAddress($liveTraceAddress)
+	{
+		self::$liveTraceAddress = $liveTraceAddress;
+	}
+
+
+
+	public static function dropAppTags()
+	{
+		self::$appTags = array();
 	}
 
 
@@ -108,7 +135,7 @@ class Core
 
 
 		$tracerOutput = null;
-		if ($params['server']['outputType'] == 'console')
+		if ($params['outputType'] == 'console')
 		{
 			$tracerOutput = new OutputConsole();
 		}
@@ -118,10 +145,10 @@ class Core
 		}
 
 		$tracerOutput->skipDisplay(self::$skipDisplay);
-		self::$outputInterfaces[$params['server']['outputType']] = $tracerOutput;
+		self::$outputInterfaces[$params['outputType']] = $tracerOutput;
 
 		// if Ajax, skip output.
-		if ($params['server']['ajax'])
+		if ($params['isAjax'])
 			self::skipDisplay(true);
 
 		foreach (self::$outputInterfaces as $tracerOutput)
@@ -186,20 +213,15 @@ class Core
 		if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest')
 			$ajax = true;
 
-
-		$server = array();
-		$server['timeStamp'] = self::$startTimer;
-		// $server['server'] = @$_ENV['HOSTNAME'];
-		$server['host'] = @$_SERVER['HTTP_HOST'] ?: "Command Line";
-		$server['filename'] = @$_SERVER['SCRIPT_FILENAME'];
+		// $params['server'] = @$_ENV['HOSTNAME'];
+		$params['host'] = @$_SERVER['HTTP_HOST'] ?: "Command Line";
+		$params['filename'] = @$_SERVER['SCRIPT_FILENAME'];
 		$server['scheme'] = @$_SERVER['HTTPS']=='on'? "https": (@$_SERVER['HTTP_HOST']? "http": "");
-		$server['method'] = @$_SERVER['REQUEST_METHOD'];
-		$server['outputType'] = $outputType;
-		$server['referrer'] = @$_SERVER['HTTP_REFERER'];
-		$server['pid'] = getmypid();
-		$server['ajax'] = $ajax;
-
-		$params['server'] = $server;
+		$params['method'] = @$_SERVER['REQUEST_METHOD'];
+		$params['outputType'] = $outputType;
+		$params['referrer'] = @$_SERVER['HTTP_REFERER'];
+		$params['pid'] = getmypid();
+		$params['isAjax'] = $ajax;
 
 		$params['argv'] = $argv;
 		$params['get'] = $_GET;
@@ -215,16 +237,12 @@ class Core
 		$params = self::getCurrentContext();
 		$params['action'] = 'shut-down';
 
-		$internals = array();
-		$internals["loadTime"] = (microtime(true) - self::$startTimer);
-		$internals["bytesUsed"] = memory_get_peak_usage(true);
-		$internals["bytesAvailable"] = intval(ini_get('memory_limit'))*1024*1024;
-		$params['internals'] = $internals;
+		$params["duration"] = (microtime(true) - self::$startTimer);
+		$params["bytesUsed"] = memory_get_peak_usage(true);
+		$params["bytesAvailable"] = intval(ini_get('memory_limit'))*1024*1024;
 
-		$user = array();
-		$user["ip"] = @($_SERVER['REMOTE_ADDR'] && $_SERVER['REMOTE_ADDR']!="::1") ?: "localhost";
-		$user["userAgent"] = @$_SERVER['HTTP_USER_AGENT'];
-		$params['user'] = $user;
+		$params["userIP"] = @($_SERVER['REMOTE_ADDR'] && $_SERVER['REMOTE_ADDR']!="::1") ?: "localhost";
+		$params["userAgent"] = @$_SERVER['HTTP_USER_AGENT'];
 
 		$files = array();
 		foreach (get_included_files() as $file)

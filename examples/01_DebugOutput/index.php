@@ -1,10 +1,17 @@
 <?php declare(strict_types=1);
 /**
- * Debug Output
+ * 01 - Debug Output - Web Page
  *
- * This example shows the most basic method for using the Trace class.
+ * This page will show how to add tracing to a web page.  The output will go directly to
+ * the web page.
  *
- */
+ *****************************************************************************************
+ * @author Lee Stewart <LeeStewart@RandomOddness.com>
+ * @copyright (c) 2019 Lee Stewart
+ * @license https://github.com/LeeStewart/obs-php/blob/master/LICENSE
+ * @version 2019.08.10.01
+ **/
+
 
 
 ini_set('display_errors', "1");
@@ -14,6 +21,7 @@ error_reporting(E_ALL);
 require_once(__DIR__."/../../src/__autoload.php");
 
 use Observability\Client\Trace;
+
 
 
 // A single command to initialize things.

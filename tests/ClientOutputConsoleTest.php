@@ -38,6 +38,7 @@ class ClientOutputConsoleTest extends TestCase
 			"multiLine"=>false,
 			"label"=>"",
 			"output"=>"Test Output",
+			"action"=>"trace-output",
 			"type"=>"string",
 			"option"=>"",
 			"caller"=>array(
@@ -65,6 +66,7 @@ class ClientOutputConsoleTest extends TestCase
 			"multiLine"=>false,
 			"label"=>"",
 			"output"=>"Test Output",
+			"action"=>"trace-output",
 			"type"=>"string",
 			"option"=>"",
 			"caller"=>array(
@@ -92,6 +94,7 @@ class ClientOutputConsoleTest extends TestCase
 			"multiLine"=>false,
 			"label"=>"",
 			"output"=>"Test Output",
+			"action"=>"trace-output",
 			"type"=>"string",
 			"option"=>"",
 			"caller"=>array(
@@ -119,6 +122,7 @@ class ClientOutputConsoleTest extends TestCase
 			"multiLine"=>false,
 			"label"=>"",
 			"output"=>"Test Output",
+			"action"=>"trace-output",
 			"type"=>"string",
 			"option"=>"",
 			"caller"=>array(
@@ -145,6 +149,7 @@ class ClientOutputConsoleTest extends TestCase
 			"severity"=>Trace::SEVERITY_TRACING,
 			"multiLine"=>false,
 			"label"=>"Test Label",
+			"action"=>"trace-output",
 			"output"=>"Test Output",
 			"type"=>"string",
 			"option"=>"",
@@ -172,6 +177,7 @@ class ClientOutputConsoleTest extends TestCase
 			"severity"=>Trace::SEVERITY_TRACING,
 			"multiLine"=>true,
 			"label"=>"Test Label",
+			"action"=>"trace-output",
 			"output"=>print_r($this->console, true),
 			"type"=>"object",
 			"option"=>"",

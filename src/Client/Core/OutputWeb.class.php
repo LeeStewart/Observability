@@ -1,4 +1,16 @@
 <?php declare(strict_types=1);
+/**
+ * Client - Core - Output Web Class
+ *
+ * One of the classes that allows the Core code to output to different devices or other
+ * servers. This class outputs to a web page and attempts to color code the Trace data.
+ *
+ *****************************************************************************************
+ * @author Lee Stewart <LeeStewart@RandomOddness.com>
+ * @copyright (c) 2019 Lee Stewart
+ * @license https://github.com/LeeStewart/obs-php/blob/master/LICENSE
+ * @version 2019.08.14.01
+ **/
 
 
 
@@ -6,6 +18,7 @@ namespace Observability\Client\Core;
 
 
 use Observability\Client\Trace;
+
 
 
 class OutputWeb implements OutputInterface
@@ -20,7 +33,7 @@ class OutputWeb implements OutputInterface
 
 
 
-	public function output(array $params)
+	public function output(array $params=[])
 	{
 		if ($this->skipDisplay || ($params['action'] != 'trace-output'))
 			return;
@@ -73,13 +86,12 @@ class OutputWeb implements OutputInterface
 	}
 
 
-	public function startup(array $params)
-	{
-	}
 
-
-	public function shutdown(array $params)
+	public function shutdown(array $params=[])
 	{
+		if ($this->skipDisplay)
+			return;
+
 		echo "	<style>
 					.tracer-output {
 						width: 90%;

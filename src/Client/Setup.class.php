@@ -1,11 +1,19 @@
 <?php declare(strict_types=1);
-
+/**
+ * Client - Setup Class
+ *
+ * A static class that acts as the interface for all Client-side setup and configuration.
+ *
+ *****************************************************************************************
+ * @author Lee Stewart <LeeStewart@RandomOddness.com>
+ * @copyright (c) 2019 Lee Stewart
+ * @license https://github.com/LeeStewart/obs-php/blob/master/LICENSE
+ * @version 2019.08.14.01
+ **/
 
 
 
 namespace Observability\Client;
-
-
 
 
 
@@ -33,7 +41,7 @@ class Setup
 
 	public static function shutdown()
 	{
-		// Core::shutdown is called automatically.
+		// shutdown is called automatically.
 	}
 
 
@@ -54,6 +62,13 @@ class Setup
 	public static function setUserIdentifierString($userIdentifierString)
 	{
 		Core\Core::setUserIdentifierString($userIdentifierString);
+	}
+
+
+
+	public static function setLiveTraceAddress($liveTraceAddress)
+	{
+		Core\Core::setLiveTraceAddress($liveTraceAddress);
 	}
 
 

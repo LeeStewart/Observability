@@ -1,14 +1,25 @@
 <?php declare(strict_types=1);
-
+/**
+ * Client - Core - Output Socket Class
+ *
+ * One of the classes that allows the Core code to output to different devices or other
+ * servers. This class outputs to a Storage Service.
+ *
+ *****************************************************************************************
+ * @author Lee Stewart <LeeStewart@RandomOddness.com>
+ * @copyright (c) 2019 Lee Stewart
+ * @license https://github.com/LeeStewart/obs-php/blob/master/LICENSE
+ * @version 2019.08.14.01
+ **/
 
 
 namespace Observability\Client\Core;
 
 
-
 use Socket\Raw\Exception;
 use Socket\Raw\Factory;
 use Socket\Raw\Socket;
+
 
 
 class OutputSocket implements OutputInterface
@@ -20,12 +31,12 @@ class OutputSocket implements OutputInterface
 
 
 
-	public function __construct($collectionServerAddress='tcp://localhost:55012')
+	public function __construct($storageServiceAddress='tcp://localhost:55012')
 	{
 		try
 		{
 			$factory = new Factory();
-			$this->socket = $factory->createClient($collectionServerAddress);
+			$this->socket = $factory->createClient($storageServiceAddress);
 
 		}
 		catch (Exception $e)
@@ -45,7 +56,7 @@ class OutputSocket implements OutputInterface
 
 
 
-	public function output(array $params)
+	public function output(array $params=[])
 	{
 		if (!$this->socket)
 			return;
@@ -55,7 +66,7 @@ class OutputSocket implements OutputInterface
 
 
 
-	public function startup(array $params)
+	public function startup(array $params=[])
 	{
 		if (!$this->socket)
 			return;
@@ -75,7 +86,7 @@ class OutputSocket implements OutputInterface
 
 
 
-	public function shutdown(array $params)
+	public function shutdown(array $params=[])
 	{
 		if (!$this->socket)
 			return;

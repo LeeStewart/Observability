@@ -1,5 +1,16 @@
 <?php declare(strict_types=1);
-
+/**
+ * Client - Core - Output Console Class
+ *
+ * One of the classes that allows the Core code to output to different devices or other
+ * servers. This class outputs to the console and attempts to color code the Trace data.
+ *
+ *****************************************************************************************
+ * @author Lee Stewart <LeeStewart@RandomOddness.com>
+ * @copyright (c) 2019 Lee Stewart
+ * @license https://github.com/LeeStewart/obs-php/blob/master/LICENSE
+ * @version 2019.08.14.01
+ **/
 
 
 
@@ -26,7 +37,7 @@ class OutputConsole implements OutputInterface
 
 
 
-	public function output(array $params)
+	public function output(array $params=[])
 	{
 		if ($this->skipDisplay || ($params['action'] != 'trace-output'))
 			return;
@@ -73,8 +84,4 @@ class OutputConsole implements OutputInterface
 		echo $output.PHP_EOL.$caller.PHP_EOL;
 	}
 
-	public function shutdown(array $params)
-	{
-//		print_r($params);
-	}
 }
