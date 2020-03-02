@@ -74,14 +74,14 @@ class OutputSocket implements OutputInterface
 		$this->socket->write(json_encode($params)."\n");
 
 		// Receive and ignore response.
-		$response = $this->socket->read(8192);
+		$response = $this->socket->read( 1024 * 1024 );
 		//var_dump(htmlentities($response));
 
 
 		// @todo Remove temporary debugging output...
-		echo "<pre>";
-		print_r($params);
-		echo "</pre>";
+		//echo "<pre>";
+		//print_r($params);
+		//echo "</pre>";
 	}
 
 
@@ -97,9 +97,9 @@ class OutputSocket implements OutputInterface
 		$this->socket->close();
 
 		// @todo Remove temporary debugging output...
-		echo "<pre>";
-		print_r($params);
-		echo "</pre>";
+		//echo "<pre>";
+		//print_r($params);
+		//echo "</pre>";
 	}
 
 }

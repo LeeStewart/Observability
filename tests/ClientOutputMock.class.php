@@ -11,7 +11,7 @@ class ClientOutputMock implements Observability\Client\Core\OutputInterface
 
 
 
-	public function output(array $params)
+	public function output(array $params=[])
 	{
 		$this->lastOutput = $params;
 	}

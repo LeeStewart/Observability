@@ -62,7 +62,7 @@ class OutputWeb implements OutputInterface
 		}
 
 
-		if ($params['multiLine'])
+		if ($params['isMultiLine'])
 		{
 			$output .= "{$label}<pre class='tracer-message'>{$params['output']}</pre>";
 		}

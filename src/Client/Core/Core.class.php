@@ -7,9 +7,9 @@
  *
  *****************************************************************************************
  * @author Lee Stewart <LeeStewart@RandomOddness.com>
- * @copyright (c) 2019 Lee Stewart
+ * @copyright (c) 2020 Lee Stewart
  * @license https://github.com/LeeStewart/obs-php/blob/master/LICENSE
- * @version 2019.08.14.01
+ * @version 2020.02.22.01
  **/
 
 
@@ -21,7 +21,7 @@ namespace Observability\Client\Core;
 class Core
 {
 	const PLATFORM = "PHP";
-	const VERSION = "2019.08.07.01";
+	const VERSION = "2020.02.02.01";
 
 	private static $initialized = false;
 	private static $skipDisplay = false;
@@ -29,7 +29,7 @@ class Core
 	/** @var OutputInterface[] $outputInterfaces */
 	private static $outputInterfaces = array();
 
-	private static $appTags = array();
+	private static $tags = array();
 
 	// How long did it take to execute this page?
 	private static $startTimer = 0;
@@ -52,20 +52,23 @@ class Core
 	}
 
 
-
-	public static function getCurrentContext()
+	public static function getCurrentContext( array $tags = array() )
 	{
 		$context = array();
 
-		$context['spanIdentifier'] = self::$spanIdentifier;
+		$tags = array_merge( self::$tags, $tags );
+		foreach ( $tags as $key => $value ) {
+			if ( ! $value ) {
+				unset( $tags[ $key ] );
+			}
+		}
+
+		$context['spanIdentifier']       = self::$spanIdentifier;
 		$context['parentSpanIdentifier'] = self::$parentSpanIdentifier;
-		$context['userIdentifier'] = self::$userIdentifier;
+		$context['userIdentifier']       = self::$userIdentifier;
 		$context['userIdentifierString'] = self::$userIdentifierString;
-		$context['liveTraceAddress'] = self::$liveTraceAddress;
-		$context['platform'] = Core::PLATFORM;
-		$context['version'] = Core::VERSION;
-		$context['tags'] = self::$appTags;
-		$context['timeStamp'] = microtime(true);
+		$context['liveTraceAddress']     = self::$liveTraceAddress;
+		$context['tags']                 = $tags;
 
 		return $context;
 	}
@@ -104,17 +107,13 @@ class Core
 	}
 
 
-
-	public static function dropAppTags()
-	{
-		self::$appTags = array();
+	public static function dropTags() {
+		self::$tags = array();
 	}
 
 
-
-	public static function setAppTag($appTag)
-	{
-		self::$appTags[] = $appTag;
+	public static function setTag( $tag, $value ) {
+		self::$tags[ $tag ] = $value;
 	}
 
 
@@ -131,8 +130,11 @@ class Core
 
 		self::$spanIdentifier = self::generateIdentifier();
 
+		$header = self::getMessageHeader('start-up');
+		$context = self::getCurrentContext();
 		$params = self::formatStartupArguments();
 
+		$params = array_merge($header, $context, $params);
 
 		$tracerOutput = null;
 		if ($params['outputType'] == 'console')
@@ -161,24 +163,62 @@ class Core
 
 	public static function shutdown()
 	{
+		$header = self::getMessageHeader('shut-down');
+		$context = self::getCurrentContext();
 		$params = self::formatShutdownArguments();
+
+		$params = array_merge($header, $context, $params);
+
 		foreach (self::$outputInterfaces as $tracerOutput)
 			$tracerOutput->shutdown($params);
 	}
 
 
+	public static function outputTrace( array $params, array $tags = array() ) {
+		$header  = self::getMessageHeader( 'trace-output' );
+		$context = self::getCurrentContext( $tags );
 
-	public static function outputTrace(array $params)
-	{
-		$context = self::getCurrentContext();
-		$context['action'] = 'trace-output';
-
-		$params = array_merge($context, $params);
+		$params = array_merge($header, $context, $params);
 
 		foreach (self::$outputInterfaces as $output)
 			$output->output($params);
 	}
 
+
+	public static function outputMetric( array $params, array $tags = array() ) {
+		$header  = self::getMessageHeader( 'metrics-output' );
+		$context = self::getCurrentContext( $tags );
+
+		$params = array_merge( $header, $context, $params );
+
+		foreach ( self::$outputInterfaces as $output ) {
+			$output->output( $params );
+		}
+	}
+
+
+	public static function startTiming( array $params, array $tags = array() ) {
+		$header  = self::getMessageHeader( 'timing-start' );
+		$context = self::getCurrentContext( $tags );
+
+		$params = array_merge( $header, $context, $params );
+
+		foreach ( self::$outputInterfaces as $output ) {
+			$output->output( $params );
+		}
+	}
+
+
+	public static function outputTiming( array $params, array $tags = array() ) {
+		$header  = self::getMessageHeader( 'timing-output' );
+		$context = self::getCurrentContext( $tags );
+
+		$params = array_merge( $header, $context, $params );
+
+		foreach ( self::$outputInterfaces as $output ) {
+			$output->output( $params );
+		}
+	}
 
 
 	public static function skipDisplay($skip=true)
@@ -192,12 +232,25 @@ class Core
 
 
 
+	private static function getMessageHeader($action)
+	{
+		$header = array();
+
+		$header['action'] = $action;
+		$header['platform'] = Core::PLATFORM;
+		$header['version'] = Core::VERSION;
+		$header['timeStamp'] = microtime(true);
+
+		return $header;
+	}
+
+
+
 	private static function formatStartupArguments()
 	{
 		global $argv;
 
-		$params = self::getCurrentContext();
-		$params['action'] = 'start-up';
+		$params = array();
 
 		$outputType = "";
 		if (php_sapi_name() == 'cli')
@@ -214,9 +267,9 @@ class Core
 			$ajax = true;
 
 		// $params['server'] = @$_ENV['HOSTNAME'];
-		$params['host'] = @$_SERVER['HTTP_HOST'] ?: "Command Line";
+		$params['host'] = isset($_SERVER['HTTP_HOST'])? $_SERVER['HTTP_HOST']: "Command Line";
 		$params['filename'] = @$_SERVER['SCRIPT_FILENAME'];
-		$server['scheme'] = @$_SERVER['HTTPS']=='on'? "https": (@$_SERVER['HTTP_HOST']? "http": "");
+		$server['scheme'] = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS']=='on')? "https": (@$_SERVER['HTTP_HOST']? "http": "");
 		$params['method'] = @$_SERVER['REQUEST_METHOD'];
 		$params['outputType'] = $outputType;
 		$params['referrer'] = @$_SERVER['HTTP_REFERER'];
@@ -234,12 +287,30 @@ class Core
 
 	private static function formatShutdownArguments()
 	{
-		$params = self::getCurrentContext();
-		$params['action'] = 'shut-down';
+		$params = array();
 
 		$params["duration"] = (microtime(true) - self::$startTimer);
 		$params["bytesUsed"] = memory_get_peak_usage(true);
-		$params["bytesAvailable"] = intval(ini_get('memory_limit'))*1024*1024;
+
+		$memoryLimit = ini_get( 'memory_limit' );
+		if ( $memoryLimit == - 1 ) {
+			$params["bytesAvailable"] = 0;
+
+		} else if ( $memoryLimit == "" . intval( $memoryLimit ) ) {
+			$params["bytesAvailable"] = $memoryLimit;
+
+		} else if ( preg_match( '/^(\d+)(.)$/', $memoryLimit, $matches ) ) {
+			$memoryLimit = 0;
+
+			if ( $matches[2] == 'G' ) {
+				$memoryLimit = $matches[1] * 1024 * 1024 * 1024; // nnnG -> nnn bytes
+			} else if ( $matches[2] == 'M' ) {
+				$memoryLimit = $matches[1] * 1024 * 1024; // nnnM -> nnn bytes
+			} else if ( $matches[2] == 'K' ) {
+				$memoryLimit = $matches[1] * 1024; // nnnK -> nnn bytes
+			}
+			$params["bytesAvailable"] = $memoryLimit;
+		}
 
 		$params["userIP"] = @($_SERVER['REMOTE_ADDR'] && $_SERVER['REMOTE_ADDR']!="::1") ?: "localhost";
 		$params["userAgent"] = @$_SERVER['HTTP_USER_AGENT'];

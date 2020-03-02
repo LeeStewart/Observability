@@ -19,8 +19,8 @@ class ClientCoreTest extends TestCase
 
 	public function testDroppingTags()
 	{
-		Setup::setAppPath("ShouldBeDropped");
-		CoreClass::dropAppTags();
+		Setup::setTags(array("tag"=>"ShouldBeDropped"));
+		CoreClass::dropTags();
 
 		$context = json_decode(Setup::getCurrentContextString(), true);
 		$this->assertEquals($context['tags'], array());
@@ -39,63 +39,24 @@ class ClientCoreTest extends TestCase
 
 	public function testVerifySimpleStringTag()
 	{
-		CoreClass::dropAppTags();
-		Setup::setAppPath("StringOne");
+		CoreClass::dropTags();
+		Setup::setTags(array("string_one"=>"value"));
 
 		$context = json_decode(Setup::getCurrentContextString(), true);
 
-		$this->assertEquals($context['tags'], array("StringOne"));
+		$this->assertEquals($context['tags'], array("string_one"=>"value"));
 
 	}
 
 
-	public function testVerifyMultipleSimpleStringTagss()
+	public function testVerifyMultipleSimpleStringTags()
 	{
-		CoreClass::dropAppTags();
-		Setup::setAppPath("String1", "String2");
+		CoreClass::dropTags();
+		Setup::setTags(array("string_one"=>"value", "string_two"=>"value"));
 
 		$context = json_decode(Setup::getCurrentContextString(), true);
 
-		$this->assertEquals($context['tags'], array("String1", "String2"));
-
-	}
-
-
-
-	public function testVerifyComplexStringTags()
-	{
-		CoreClass::dropAppTags();
-		Setup::setAppPath("StringA.StringB");
-
-		$context = json_decode(Setup::getCurrentContextString(), true);
-
-		$this->assertEquals($context['tags'], array("StringA", "StringB"));
-
-	}
-
-
-
-	public function testVerifyMultipleComplexStringTags()
-	{
-		CoreClass::dropAppTags();
-		Setup::setAppPath("StringOneA.StringOneB", "StringTwoA.StringTwoB");
-
-		$context = json_decode(Setup::getCurrentContextString(), true);
-
-		$this->assertEquals($context['tags'], array("StringOneA", "StringOneB", "StringTwoA", "StringTwoB"));
-
-	}
-
-
-
-	public function testVerifyMultipleMixedStringTags()
-	{
-		CoreClass::dropAppTags();
-		Setup::setAppPath("StringOneA", "StringTwoA.StringTwoB", "StringThreeA");
-
-		$context = json_decode(Setup::getCurrentContextString(), true);
-
-		$this->assertEquals($context['tags'], array("StringOneA", "StringTwoA", "StringTwoB", "StringThreeA"));
+		$this->assertEquals($context['tags'], array("string_one"=>"value", "string_two"=>"value"));
 
 	}
 

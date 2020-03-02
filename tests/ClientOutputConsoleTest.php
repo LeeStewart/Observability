@@ -35,7 +35,7 @@ class ClientOutputConsoleTest extends TestCase
 	{
 		$params = array(
 			"severity"=>Trace::SEVERITY_TRACING,
-			"multiLine"=>false,
+			"isMultiLine"=>false,
 			"label"=>"",
 			"output"=>"Test Output",
 			"action"=>"trace-output",
@@ -63,7 +63,7 @@ class ClientOutputConsoleTest extends TestCase
 	{
 		$params = array(
 			"severity"=>Trace::SEVERITY_INFO,
-			"multiLine"=>false,
+			"isMultiLine"=>false,
 			"label"=>"",
 			"output"=>"Test Output",
 			"action"=>"trace-output",
@@ -91,7 +91,7 @@ class ClientOutputConsoleTest extends TestCase
 	{
 		$params = array(
 			"severity"=>Trace::SEVERITY_WARNING,
-			"multiLine"=>false,
+			"isMultiLine"=>false,
 			"label"=>"",
 			"output"=>"Test Output",
 			"action"=>"trace-output",
@@ -119,7 +119,7 @@ class ClientOutputConsoleTest extends TestCase
 	{
 		$params = array(
 			"severity"=>Trace::SEVERITY_ERROR,
-			"multiLine"=>false,
+			"isMultiLine"=>false,
 			"label"=>"",
 			"output"=>"Test Output",
 			"action"=>"trace-output",
@@ -147,7 +147,7 @@ class ClientOutputConsoleTest extends TestCase
 	{
 		$params = array(
 			"severity"=>Trace::SEVERITY_TRACING,
-			"multiLine"=>false,
+			"isMultiLine"=>false,
 			"label"=>"Test Label",
 			"action"=>"trace-output",
 			"output"=>"Test Output",
@@ -175,7 +175,7 @@ class ClientOutputConsoleTest extends TestCase
 	{
 		$params = array(
 			"severity"=>Trace::SEVERITY_TRACING,
-			"multiLine"=>true,
+			"isMultiLine"=>true,
 			"label"=>"Test Label",
 			"action"=>"trace-output",
 			"output"=>print_r($this->console, true),

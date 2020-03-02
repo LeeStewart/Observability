@@ -99,7 +99,7 @@ class ClientOutputTest extends TestCase
 			$this->output->lastOutput['label']
 		);
 		$this->assertFalse(
-			$this->output->lastOutput['multiLine']
+			$this->output->lastOutput['isMultiLine']
 		);
 
 	}
@@ -121,7 +121,7 @@ class ClientOutputTest extends TestCase
 			$this->output->lastOutput['output']
 		);
 		$this->assertTrue(
-			$this->output->lastOutput['multiLine']
+			$this->output->lastOutput['isMultiLine']
 		);
 
 	}
@@ -147,7 +147,7 @@ class ClientOutputTest extends TestCase
 			$this->output->lastOutput['output']
 		);
 		$this->assertTrue(
-			$this->output->lastOutput['multiLine']
+			$this->output->lastOutput['isMultiLine']
 		);
 
 	}
@@ -177,7 +177,7 @@ class ClientOutputTest extends TestCase
 				$this->output->lastOutput['exception']
 			);
 			$this->assertFalse(
-				$this->output->lastOutput['multiLine']
+				$this->output->lastOutput['isMultiLine']
 			);
 
 
@@ -230,7 +230,7 @@ class ClientOutputTest extends TestCase
 			$this->output->lastOutput['output']
 		);
 		$this->assertFalse(
-			$this->output->lastOutput['multiLine']
+			$this->output->lastOutput['isMultiLine']
 		);
 
 	}
@@ -241,17 +241,17 @@ class ClientOutputTest extends TestCase
 	{
 		Trace::output();
 		$this->assertEquals(
-			"[empty string]",
+			"",
 			$this->output->lastOutput['output']
 		);
 		$this->assertFalse(
-			$this->output->lastOutput['multiLine']
+			$this->output->lastOutput['isMultiLine']
 		);
 
 
 		Trace::output(Trace::SEVERITY_ERROR);
 		$this->assertEquals(
-			"[empty string]",
+			"",
 			$this->output->lastOutput['output']
 		);
 		$this->assertEquals(
@@ -262,7 +262,7 @@ class ClientOutputTest extends TestCase
 
 		Trace::output("");
 		$this->assertEquals(
-			"[empty string]",
+			"",
 			$this->output->lastOutput['output']
 		);
 

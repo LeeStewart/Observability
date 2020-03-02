@@ -45,15 +45,9 @@ class Setup
 	}
 
 
-
-	public static function setAppPath(...$stringArray)
-	{
-		foreach ($stringArray as $rawString)
-		{
-			$parts = explode(".", $rawString);
-
-			foreach ($parts as $str)
-				Core\Core::setAppTag($str);
+	public static function setTags( array $tags ) {
+		foreach ( $tags as $tag => $value ) {
+			Core\Core::setTag( $tag, $value );
 		}
 	}
 
@@ -76,6 +70,13 @@ class Setup
 	public static function skipDisplay($skip=true)
 	{
 		Core\Core::skipDisplay($skip);
+	}
+
+
+
+	public static function setErrorHandler()
+	{
+		Trace::setErrorHandler();
 	}
 
 

@@ -31,37 +31,49 @@ class OutputConsole implements OutputInterface
 	const FOREGROUND_CALLER = "\033[1;30m";
 
 	const FOREGROUND_SEVERITY_TRACING = "\033[1;37m";
-	const FOREGROUND_SEVERITY_INFO = "\033[1;32m";
-	const FOREGROUND_SEVERITY_WARNING = "\033[1;36m";
+	const FOREGROUND_SEVERITY_INFO = "\033[1;36m";
+	const FOREGROUND_SEVERITY_WARNING = "\033[1;33m";
 	const FOREGROUND_SEVERITY_ERROR = "\033[1;31m";
+
+	const FOREGROUND_METRICS = "\033[1;32m";
 
 
 
 	public function output(array $params=[])
 	{
-		if ($this->skipDisplay || ($params['action'] != 'trace-output'))
+		if ( $this->skipDisplay )
 			return;
 
-
-		$output = self::FOREGROUND_SEVERITY_TRACING;
-		switch ($params['severity'])
-		{
-			case Trace::SEVERITY_INFO:
-				$output = self::FOREGROUND_SEVERITY_INFO;
-				break;
-			case Trace::SEVERITY_WARNING:
-				$output = self::FOREGROUND_SEVERITY_WARNING;
-				break;
-			case Trace::SEVERITY_ERROR:
-				$output = self::FOREGROUND_SEVERITY_ERROR;
-				break;
+		$action = explode( '-', $params['action'] );
+		if ( $action[1] != 'output' ) {
+			return;
 		}
 
-		if ($params['label'])
+		$showingMetrics = false;
+		if ( $action[0] == 'metrics' || $action[0] == 'timing' ) {
+			$showingMetrics = true;
+		}
+
+		$output = self::FOREGROUND_SEVERITY_TRACING;
+		if ( isset( $params['severity'] ) ) {
+			switch ( $params['severity'] ) {
+				case Trace::SEVERITY_INFO:
+					$output = self::FOREGROUND_SEVERITY_INFO;
+					break;
+				case Trace::SEVERITY_WARNING:
+					$output = self::FOREGROUND_SEVERITY_WARNING;
+					break;
+				case Trace::SEVERITY_ERROR:
+					$output = self::FOREGROUND_SEVERITY_ERROR;
+					break;
+			}
+		}
+
+		if ( ! $showingMetrics && $params['label'] )
 		{
 			$output .= $params['label'];
 
-			if ($params['multiLine'])
+			if ($params['isMultiLine'])
 			{
 				$output .= self::FOREGROUND_RESET;
 				$output .= PHP_EOL;
@@ -72,16 +84,33 @@ class OutputConsole implements OutputInterface
 			}
 		}
 
-		$output .= $params['output'];
-		$output .= self::FOREGROUND_RESET;
+		if ( $showingMetrics ) {
+			$output = self::FOREGROUND_METRICS;
+			$output .= "{$params['metric_name']} = {$params['metric_value']}";
 
-		$caller  = self::FOREGROUND_CALLER;
-		$caller .= $params['caller']['function']? "{$params['caller']['function']} in ": "";
-		$caller .= "{$params['caller']['file']}:{$params['caller']['line']}";
-		$caller .= $params['option']? " ({$params['option']})": "";
-		$caller .= self::FOREGROUND_RESET;
+			if ( isset( $params['output'] ) ) {
+				$output .= self::FOREGROUND_CALLER;
+				$output .= " {$params['output']}";
+			}
 
-		echo $output.PHP_EOL.$caller.PHP_EOL;
+			$output .= self::FOREGROUND_RESET;
+		} else {
+			$output .= $params['output'];
+			$output .= self::FOREGROUND_RESET . PHP_EOL;
+		}
+
+		$caller = '';
+
+		if ( ! isset( $params['displayOption'] ) ) {
+			$caller = self::FOREGROUND_CALLER;
+			$caller .= ! empty( $params['caller']['function'] ) ? "{$params['caller']['function']} in " : "";
+			$caller .= ! empty( $params['caller']['file'] ) ? $params['caller']['file'] : "";
+			$caller .= ! empty( $params['caller']['line'] ) ? ":{$params['caller']['line']}" : "";
+			$caller .= ! empty( $params['option'] ) ? " ({$params['option']})" : "";
+			$caller .= self::FOREGROUND_RESET . PHP_EOL;
+		}
+
+		echo $output . $caller;
 	}
 
 }

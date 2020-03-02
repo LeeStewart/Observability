@@ -30,6 +30,11 @@ class Trace
 	const SEVERITY_WARNING = '--warning';
 	const SEVERITY_ERROR = '--error';
 
+	const DUMP_STACK_TRACE = '--dump_stack_trace';
+	const HIDE_HEADER = '--hide_header';
+	const HIDE_FOOTER = '--hide_footer';
+	const HIDE_HEADER_FOOTER = '--hide_header_footer';
+
 
 
 	private function __construct() {}
@@ -38,10 +43,37 @@ class Trace
 
 	public static function __callStatic(string $name, array $arguments)
 	{
-		if ($name == 'diaf')
+		$caller = array();
+		$tags   = array();
+
+		if ($name == '_error')
 		{
+			$name = 'outputPHP';
+
+			$caller = self::formatErrorCaller($arguments, debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS));
+			$arguments = self::mapErrorArguments($arguments);
+			if (!$arguments)
+				return true;
+
+		}
+		else if ($name == '_exception')
+		{
+			// @todo This will report the function name improperly.
+			$name = 'outputException';
 			$arguments[] = self::SEVERITY_ERROR;
+			$caller = self::formatOutputCaller($arguments[0]->getTrace());
+
+		}
+		else if ($name == 'diaf')
+		{
 			$name = 'outputDIAF';
+			$arguments[] = self::SEVERITY_ERROR;
+
+		} else if ( $name == '_log' ) {
+			$name      = 'outputLog';
+			$caller    = $arguments[0]['caller'];
+			$tags      = $arguments[0]['tags'];
+			$arguments = $arguments[0]['args'];
 		}
 
 		if (substr($name, 0, strlen('output')) == 'output')
@@ -49,14 +81,26 @@ class Trace
 			// The output Parameters will be built here.
 			$params = self::formatOutputArguments($arguments);
 
-			$params['caller'] = self::formatOutputCaller(debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS));
+			if ($caller)
+				$params['caller'] = $caller;
+			else
+				$params['caller'] = self::formatOutputCaller(debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS));
+
+			if ($params['type'] == 'stack_trace')
+				$params['output'] = print_r(debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS), true);
 
 			$params['option'] = strtolower(substr($name, strlen('output')));
 
-			Core\Core::outputTrace($params);
+			Core\Core::outputTrace( $params, $tags );
 
 			if ($params['option'] == 'diaf')
 				exit;
+
+			if ($params['option'] == 'exception')
+				exit;
+
+			if ($params['option'] == 'php')
+				return true;
 
 		}
 		else
@@ -64,6 +108,73 @@ class Trace
 			// @todo Handle unknown method...
 		}
 
+		return true;
+	}
+
+
+
+	public static function setErrorHandler()
+	{
+		set_error_handler(array('\Observability\Client\Trace', '_error'), E_ALL);
+		//register_shutdown_function(array('\Observability\Client\Trace', '_shutdown'));
+		set_exception_handler(array('\Observability\Client\Trace', '_exception'));
+	}
+
+
+
+	private static function mapErrorArguments($input)
+	{
+		$arguments = array();
+
+		// We'll store the error string.
+		$errorString = $input[1];
+
+		// Ugh, we'll skip these annoyances.
+		if (substr($errorString, 0, strlen('Undefined index:')) == 'Undefined index:')
+			return $arguments;
+		if (substr($errorString, 0, strlen('Undefined variable:')) == 'Undefined variable:')
+			return $arguments;
+		if(strstr($errorString, "expected to be a reference"))
+			return $arguments;
+
+
+		$arguments[] = $errorString;
+
+		$severity = self::SEVERITY_TRACING;
+		switch($input[0])
+		{
+			case E_NOTICE:
+			case E_USER_NOTICE:
+			{
+				$severity = self::SEVERITY_INFO;
+				break;
+			}
+
+			case E_USER_WARNING:
+			case E_CORE_WARNING:
+			case E_DEPRECATED:
+			case E_USER_DEPRECATED:
+			case E_COMPILE_WARNING:
+			case E_PARSE:
+			{
+				$severity = self::SEVERITY_WARNING;
+				break;
+			}
+
+			case E_ERROR:
+			case E_RECOVERABLE_ERROR:
+			case E_CORE_ERROR:
+			case E_USER_ERROR:
+			case E_COMPILE_ERROR:
+			{
+				$severity = self::SEVERITY_ERROR;
+				break;
+			}
+
+		}
+
+		$arguments[] = $severity;
+		return $arguments;
 	}
 
 
@@ -73,7 +184,7 @@ class Trace
 		$params = array();
 
 		$params['severity'] = Trace::SEVERITY_TRACING;
-		$params['multiLine'] = false;
+		$params['isMultiLine'] = false;
 		$params['label'] = '';
 		$params['exception'] = '';
 
@@ -81,32 +192,37 @@ class Trace
 
 		foreach ($arguments as $arg)
 		{
-			if (($arg === Trace::SEVERITY_TRACING) || ($arg === Trace::SEVERITY_INFO) || ($arg === Trace::SEVERITY_WARNING) || ($arg === Trace::SEVERITY_ERROR))
-				$params['severity'] = $arg;
-			else
+			if ($arg === Trace::DUMP_STACK_TRACE)
 			{
+				$params['type'] = 'stack_trace';
+
+			} else if ( ( $arg === Trace::SEVERITY_TRACING ) || ( $arg === Trace::SEVERITY_INFO ) || ( $arg === Trace::SEVERITY_WARNING ) || ( $arg === Trace::SEVERITY_ERROR ) ) {
+				$params['severity'] = $arg;
+
+			} else if ( ( $arg === Trace::HIDE_HEADER ) || ( $arg === Trace::HIDE_FOOTER ) || ( $arg === Trace::HIDE_HEADER_FOOTER ) ) {
+				$params['displayOption'] = $arg;
+
+			} else {
 				// If we get one item, it's 'output' if we get a second string, then there was an optional 'label'.
-				if (!$output)
-				{
+				if ( ! $output ) {
 					$output = $arg;
-				}
-				else
-				{
-					$params['label'] = print_r($output, true);
-					$output = $arg;
+				} else {
+					$params['label'] = print_r( $output, true );
+					$output          = $arg;
 				}
 			}
 		}
 
 
-		$params['type'] = gettype($output);
+		if (!array_key_exists('type', $params))
+			$params['type'] = gettype($output);
 
 
 		// Format the output depending on what it is.
 		if (is_array($output))
 		{
 			$output = print_r($output, true);
-			$params['multiLine'] = true;
+			$params['isMultiLine'] = true;
 
 		}
 		else if (is_object($output))
@@ -122,7 +238,7 @@ class Trace
 			else
 			{
 				$output = print_r($output, true);
-				$params['multiLine'] = true;
+				$params['isMultiLine'] = true;
 			}
 
 		}
@@ -137,12 +253,24 @@ class Trace
 		}
 
 
-		if (!$output)
+		if (!$output && !isset($output) )
 		{
-			$output = "[empty string]";
+			$output = "[empty]";
 		}
 
 		$params['output'] = $output;
+
+		return $params;
+	}
+
+
+
+	private static function formatErrorCaller(array $input, array $stackTrace)
+	{
+		$params = array();
+		$params['file'] = $input[2];
+		$params['line'] = $input[3];
+		$params['stack'] = $stackTrace;
 
 		return $params;
 	}
@@ -153,8 +281,11 @@ class Trace
 	{
 		$params = array();
 
-		$params['file'] = $stackTrace[0]['file'];
-		$params['line'] = $stackTrace[0]['line'];
+		if (array_key_exists('file', $stackTrace[0]))
+			$params['file'] = $stackTrace[0]['file'];
+
+		if (array_key_exists('line', $stackTrace[0]))
+			$params['line'] = $stackTrace[0]['line'];
 
 		$params['function'] = "";
 		if (array_key_exists(1, $stackTrace))
@@ -168,6 +299,57 @@ class Trace
 		$params['stack'] = $stackTrace;
 
 		return $params;
+	}
+
+
+	public static function logInfo( $output, array $tags = array() ) {
+		if ( ! is_string( $output ) ) {
+			$output = print_r( $output, true );
+		}
+
+		$args = array(
+			'args'   => array(
+				$output,
+				self::SEVERITY_INFO,
+			),
+			'caller' => self::formatOutputCaller( debug_backtrace( DEBUG_BACKTRACE_IGNORE_ARGS ) ),
+			'tags'   => $tags,
+		);
+		call_user_func_array( array( '\Observability\Client\Trace', '_log' ), array( $args ) );
+	}
+
+
+	public static function logWarning( $output, array $tags = array() ) {
+		if ( ! is_string( $output ) ) {
+			$output = print_r( $output, true );
+		}
+
+		$args = array(
+			'args'   => array(
+				$output,
+				self::SEVERITY_WARNING,
+			),
+			'caller' => self::formatOutputCaller( debug_backtrace( DEBUG_BACKTRACE_IGNORE_ARGS ) ),
+			'tags'   => $tags,
+		);
+		call_user_func_array( array( '\Observability\Client\Trace', '_log' ), array( $args ) );
+	}
+
+
+	public static function logError( $output, array $tags = array() ) {
+		if ( ! is_string( $output ) ) {
+			$output = print_r( $output, true );
+		}
+
+		$args = array(
+			'args'   => array(
+				$output,
+				self::SEVERITY_ERROR,
+			),
+			'caller' => self::formatOutputCaller( debug_backtrace( DEBUG_BACKTRACE_IGNORE_ARGS ) ),
+			'tags'   => $tags,
+		);
+		call_user_func_array( array( '\Observability\Client\Trace', '_log' ), array( $args ) );
 	}
 
 }

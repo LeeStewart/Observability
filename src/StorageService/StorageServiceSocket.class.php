@@ -7,9 +7,9 @@
  *
  *****************************************************************************************
  * @author Lee Stewart <LeeStewart@RandomOddness.com>
- * @copyright (c) 2019 Lee Stewart
+ * @copyright (c) 2020 Lee Stewart
  * @license https://github.com/LeeStewart/obs-php/blob/master/LICENSE
- * @version 2019.08.10.01
+ * @version 2020.02.22.01
  **/
 
 
@@ -17,145 +17,104 @@
 namespace Observability\StorageService;
 
 
-use Socket\Raw\Exception;
-use Socket\Raw\Factory;
-use Socket\Raw\Socket;
+use Observability\Client\Core\Core;
 
 
-
-class StorageServiceSocket
-{
-	/** @var Socket $socket - we'll listen on this socket... */
+class StorageServiceSocket {
+	/** @var resource $socket - we'll listen on this socket... */
 	private $socket = null;
 
-	/** @var Socket[] $clients - incoming data will come from these sockets... */
+	/** @var resource[] $clients - incoming data will come from these sockets... */
 	private $clients = array();
 
 	private $connectionNum = 0;
 
+	private $data = array();
 
 
-	public function __construct($address='tcp://localhost:55012')
-	{
-		try
-		{
-			$factory = new Factory();
-			$this->socket = $factory->createServer($address);
+	public function __construct( $port = 55012 ) {
+		// @todo Change the socket into one that uses UDP.
+		$this->socket = socket_create( AF_INET, SOCK_STREAM, SOL_TCP );
 
-			$this->socket->listen();
-			$this->socket->setBlocking(false);
+		socket_set_option( $this->socket, SOL_SOCKET, SO_REUSEADDR, 1 );
 
-		}
-		catch (Exception $e)
-		{
-			// @todo Need to report this error
-			$this->socket = null;
-		}
+		// Now "bind" the socket to the address to "localhost".
+		socket_bind( $this->socket, '127.0.0.1', $port );
 
+		socket_listen( $this->socket );
 	}
 
 
-
-	public function checkConnection()
-	{
-		return (bool)$this->socket;
+	public function checkConnection() {
+		return (bool) $this->socket;
 	}
 
 
+	public function processClients() {
+		$read              = $this->clients;
+		$read['listening'] = $this->socket;
 
-	public function acceptIncomingConnections()
-	{
-		$client = null;
-		try
-		{
-			if ($client = $this->socket->accept())
-			{
-				$this->connectionNum++;
-				$request = json_decode($client->read(16 * 1024, PHP_NORMAL_READ), true);
+		$write = $except = null;
 
-				if (!$request || !array_key_exists('spanIdentifier', $request))
-				{
-					// @todo Do something with the error.
-					print_r($request);
-				}
-				else
-				{
-					$response = array(
-						'connectionNum'=> $this->connectionNum,
-					);
-					$client->write(json_encode($response)."\n");
+		// Get a list of all the clients that have data.
+		if ( socket_select( $read, $write, $except, null ) < 1 ) {
+			return;
+		}
 
-					//echo "New client connected #{$this->connectionNum} - '{$request['spanIdentifier']}'\n";
+		// Check if there is a client trying to connect.
+		if ( isset( $read['listening'] ) ) {
+			$this->connectionNum ++;
 
-					$this->clients[$request['spanIdentifier']] = $client;
-					return $request;
-				}
+			$client = socket_accept( $this->socket );
+
+			$request = json_decode( socket_read( $client, 1024 * 1024, PHP_NORMAL_READ ), true );
+
+			if ( ! $request || ! array_key_exists( 'spanIdentifier', $request ) ) {
+				// @todo Do something with the error.
+
+			} else {
+				$response = array(
+					'platform'      => Core::PLATFORM,
+					'version'       => Core::VERSION,
+					'connectionNum' => $this->connectionNum,
+					'timeStamp'     => microtime( true ),
+				);
+				socket_write( $client, json_encode( $response ) . "\n" );
+
+				//echo "New client connected #{$this->connectionNum} - '{$request['spanIdentifier']}'\n";
+
+				$this->clients[ $request['spanIdentifier'] ] = $client;
+
+				$this->data[] = $request;
 			}
 
-		}
-		catch (Exception $e)
-		{
-
+			// Remove the listening socket from the clients-with-data array.
+			unset( $read['listening'] );
 		}
 
-		return array();
+
+		// Loop through all the clients that have data.
+		foreach ( $read as $identifier => $client ) {
+			$data = @socket_read( $client, 1024 * 1024, PHP_NORMAL_READ );
+
+			// If there was an error, we'll remove this socket.
+			if ( $data === false ) {
+				unset( $this->clients[ $identifier ] );
+
+			} else {
+				//echo "$identifier - ";
+				//echo strlen($data)." bytes";
+				//echo "\n";
+				$data = json_decode( trim( $data ), true );
+				unset( $data['files'] );
+				$this->data[] = $data;
+			}
+		}
 	}
 
 
-
-	public function getIncomingData()
-	{
-		foreach ($this->clients as $identifier=>$client)
-		{
-			$data = '';
-
-			try
-			{
-				$client->assertAlive();
-
-				//			$data = $client->recv(16*1024, MSG_DONTWAIT | MSG_PEEK);
-				$ret = socket_recv($client->getResource(), $buffer, 16 * 1024, MSG_DONTWAIT | MSG_PEEK);
-
-				if ($ret === false)
-				{
-					// This means "no data"?
-
-				}
-				else if ($ret > 0)
-				{
-					$data = $client->read(16 * 1024, PHP_NORMAL_READ);
-
-					$data = trim($data);
-
-					//echo "$identifier - ";
-					//echo strlen($data)." bytes";
-					//echo "\n";
-
-					$data = json_decode($data, true);
-					//if ($data['action'] == 'trace-output')
-					//	$tracerOutput->output($data);
-
-					return $data;
-
-				}
-				else
-				{
-					$client->assertAlive();
-					//echo "Killing connection '$identifier'\n";
-					unset($this->clients[$identifier]);
-				}
-
-			}
-			catch (Exception $e)
-			{
-				//echo "Killing connection '$identifier' {$e->getMessage()}\n";
-				unset($this->clients[$identifier]);
-
-			}
-
-		}
-
-		return array();
+	public function getIncomingData() {
+		return array_shift( $this->data );
 	}
 
 }
