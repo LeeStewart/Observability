@@ -1,4 +1,14 @@
 {
+    "name": "uconnect/big_data",
+    "description": "this is a description",
+    "type": "library",
+    "version": "1.0.0",
+    "authors": [
+        {
+            "name": "Lee Stewart",
+            "email": "leestewart@randomoddness.com"
+        }
+    ],
     "autoload": {
       "psr-4": {"Observability\\": "src/"}
     },
@@ -12,6 +22,7 @@
         "ext-sockets": "*",
         "ext-curl": "*",
         "ext-mongo": "*",
-        "ext-mysqli": "*"
+        "ext-mysqli": "*",
+        "ext-posix": "*"
     }
 }
