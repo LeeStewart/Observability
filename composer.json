@@ -1,6 +1,6 @@
 {
-    "name": "uconnect/big_data",
-    "description": "this is a description",
+    "name": "leestewart/obs-php",
+    "description": "Observability - add instrumentation the easy way!",
     "type": "library",
     "version": "1.0.0",
     "authors": [
