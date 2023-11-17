@@ -35,6 +35,7 @@ class Trace
 	const HIDE_FOOTER = '--hide_footer';
 	const HIDE_HEADER_FOOTER = '--hide_header_footer';
 
+	private static $skipCommonErrors = false;
 
 
 	private function __construct() {}
@@ -52,8 +53,9 @@ class Trace
 
 			$caller = self::formatErrorCaller($arguments, debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS));
 			$arguments = self::mapErrorArguments($arguments);
-			if (!$arguments)
+			if (!$arguments) {
 				return true;
+			}
 
 		}
 		else if ($name == '_exception')
@@ -81,26 +83,31 @@ class Trace
 			// The output Parameters will be built here.
 			$params = self::formatOutputArguments($arguments);
 
-			if ($caller)
+			if ( $caller ) {
 				$params['caller'] = $caller;
-			else
+			} else {
 				$params['caller'] = self::formatOutputCaller(debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS));
+			}
 
-			if ($params['type'] == 'stack_trace')
+			if ( $params['type'] == 'stack_trace' ) {
 				$params['output'] = print_r(debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS), true);
+			}
 
 			$params['option'] = strtolower(substr($name, strlen('output')));
 
 			Core\Core::outputTrace( $params, $tags );
 
-			if ($params['option'] == 'diaf')
+			if ( $params['option'] == 'diaf' ) {
 				exit;
+			}
 
-			if ($params['option'] == 'exception')
+			if ( $params['option'] == 'exception' ) {
 				exit;
+			}
 
-			if ($params['option'] == 'php')
+			if ( $params['option'] == 'php' ) {
 				return true;
+			}
 
 		}
 		else
@@ -121,6 +128,9 @@ class Trace
 	}
 
 
+	public static function skipCommonErrors( $skip = true ) {
+		self::$skipCommonErrors = (bool) $skip;
+	}
 
 	private static function mapErrorArguments($input)
 	{
@@ -130,12 +140,20 @@ class Trace
 		$errorString = $input[1];
 
 		// Ugh, we'll skip these annoyances.
-		if (substr($errorString, 0, strlen('Undefined index:')) == 'Undefined index:')
-			return $arguments;
-		if (substr($errorString, 0, strlen('Undefined variable:')) == 'Undefined variable:')
-			return $arguments;
-		if(strstr($errorString, "expected to be a reference"))
-			return $arguments;
+		if ( self::$skipCommonErrors ) {
+			if ( substr( $errorString, 0, strlen( 'Undefined index:' ) ) == 'Undefined index:' ) {
+				return $arguments;
+			}
+			if ( substr( $errorString, 0, strlen( 'Undefined offset:' ) ) == 'Undefined offset:' ) {
+				return $arguments;
+			}
+			if ( substr( $errorString, 0, strlen( 'Undefined variable:' ) ) == 'Undefined variable:' ) {
+				return $arguments;
+			}
+			if ( strstr( $errorString, "expected to be a reference" ) ) {
+				return $arguments;
+			}
+		}
 
 
 		$arguments[] = $errorString;
@@ -281,18 +299,22 @@ class Trace
 	{
 		$params = array();
 
-		if (array_key_exists('file', $stackTrace[0]))
-			$params['file'] = $stackTrace[0]['file'];
+		if ( isset( $stackTrace[0] ) && is_array( $stackTrace[0] ) ) {
+			if ( array_key_exists( 'file', $stackTrace[0] ) ) {
+				$params['file'] = $stackTrace[0]['file'];
+			}
 
-		if (array_key_exists('line', $stackTrace[0]))
-			$params['line'] = $stackTrace[0]['line'];
+			if ( array_key_exists( 'line', $stackTrace[0] ) ) {
+				$params['line'] = $stackTrace[0]['line'];
+			}
+		}
 
 		$params['function'] = "";
-		if (array_key_exists(1, $stackTrace))
-		{
+		if ( array_key_exists( 1, $stackTrace ) ) {
 			$params['function'] = "{$stackTrace[1]['function']}()";
-			if (array_key_exists('class', $stackTrace[1]))
+			if ( array_key_exists( 'class', $stackTrace[1] ) ) {
 				$params['function'] = "{$stackTrace[1]['class']}{$stackTrace[1]['type']}{$stackTrace[1]['function']}()";
+			}
 
 		}
 

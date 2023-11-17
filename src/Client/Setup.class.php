@@ -80,6 +80,9 @@ class Setup
 	}
 
 
+	public static function skipCommonErrors( $skip = true ) {
+		Trace::skipCommonErrors( $skip );
+	}
 
 	public static function getCurrentContextString()
 	{

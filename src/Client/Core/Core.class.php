@@ -263,18 +263,28 @@ class Core
 		}
 
 		$ajax = false;
-		if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest')
+		if ( ! empty( $_SERVER['HTTP_X_REQUESTED_WITH'] ) && strtolower( $_SERVER['HTTP_X_REQUESTED_WITH'] ) == 'xmlhttprequest' ) {
 			$ajax = true;
+		}
 
 		// $params['server'] = @$_ENV['HOSTNAME'];
 		$params['host'] = isset($_SERVER['HTTP_HOST'])? $_SERVER['HTTP_HOST']: "Command Line";
-		$params['filename'] = @$_SERVER['SCRIPT_FILENAME'];
 		$server['scheme'] = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS']=='on')? "https": (@$_SERVER['HTTP_HOST']? "http": "");
-		$params['method'] = @$_SERVER['REQUEST_METHOD'];
 		$params['outputType'] = $outputType;
-		$params['referrer'] = @$_SERVER['HTTP_REFERER'];
 		$params['pid'] = getmypid();
 		$params['isAjax'] = $ajax;
+
+		if ( isset( $_SERVER['SCRIPT_FILENAME'] ) ) {
+			$params['filename'] = $_SERVER['SCRIPT_FILENAME'];
+		}
+
+		if ( isset( $_SERVER['HTTP_REFERER'] ) ) {
+			$params['referrer'] = $_SERVER['HTTP_REFERER'];
+		}
+
+		if ( isset( $_SERVER['REQUEST_METHOD'] ) ) {
+			$params['method'] = $_SERVER['REQUEST_METHOD'];
+		}
 
 		$params['argv'] = $argv;
 		$params['get'] = $_GET;
@@ -312,22 +322,22 @@ class Core
 			$params["bytesAvailable"] = $memoryLimit;
 		}
 
-		$params["userIP"] = @($_SERVER['REMOTE_ADDR'] && $_SERVER['REMOTE_ADDR']!="::1") ?: "localhost";
-		$params["userAgent"] = @$_SERVER['HTTP_USER_AGENT'];
+		$params["userIP"] = ( isset( $_SERVER['REMOTE_ADDR'] ) && $_SERVER['REMOTE_ADDR'] != "::1" ) ? $_SERVER['REMOTE_ADDR'] : "localhost";
+		if ( isset( $_SERVER['HTTP_USER_AGENT'] ) ) {
+			$params["userAgent"] = $_SERVER['HTTP_USER_AGENT'];
+		}
 
 		$files = array();
-		foreach (get_included_files() as $file)
-		{
-			if (!realpath($file))
-			{
-				if (!realpath(dirname($_SERVER['SCRIPT_FILENAME'])."/{$file}"))
+		foreach ( get_included_files() as $file ) {
+			if ( ! realpath( $file ) ) {
+				if ( ! realpath( dirname( $_SERVER['SCRIPT_FILENAME'] ) . "/{$file}" ) ) {
 					$files[] = $file;
-
-				else
-					$files[] = realpath(dirname($_SERVER['SCRIPT_FILENAME'])."/{$file}");
+				} else {
+					$files[] = realpath( dirname( $_SERVER['SCRIPT_FILENAME'] ) . "/{$file}" );
+				}
+			} else {
+				$files[] = realpath( $file );
 			}
-			else
-				$files[] = realpath($file);
 		}
 		$params['files'] = $files;
 
